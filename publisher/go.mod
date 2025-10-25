@@ -2,10 +2,7 @@ module hands/recorder/publisher
 
 go 1.24.0
 
-require (
-	cloud.google.com/go/pubsub v1.50.1
-	github.com/fsnotify/fsnotify v1.9.0
-)
+require cloud.google.com/go/pubsub v1.50.1
 
 require (
 	cloud.google.com/go v0.121.6 // indirect

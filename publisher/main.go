@@ -9,11 +9,10 @@ import (
 	"time"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/fsnotify/fsnotify"
 )
 
 func main() {
-	log.Println("--- Go Directory Watcher Publisher Initializing ---")
+	log.Println("--- Go Sequential Publisher Initializing (Synchronous) ---")
 
 	// --- Configuration from Environment Variables ---
 	projectID := getEnv("GCP_PROJECT_ID", "lagorgeous-helping-hands")
@@ -21,20 +20,8 @@ func main() {
 	streamName := getEnv("STREAM_NAME", "dexerityro")
 	baseFramesDir := getEnv("FRAMES_DIR", "/mnt/nfs/streams")
 
-	// Define directories
 	framesDir := filepath.Join(baseFramesDir, streamName, "frames")
-	newDir := filepath.Join(framesDir, "new")
-	processedDir := filepath.Join(framesDir, "processed")
-
-	// Ensure directories exist
-	if err := os.MkdirAll(newDir, 0755); err != nil {
-		log.Fatalf("Failed to create 'new' directory %s: %v", newDir, err)
-	}
-	if err := os.MkdirAll(processedDir, 0755); err != nil {
-		log.Fatalf("Failed to create 'processed' directory %s: %v", processedDir, err)
-	}
-
-	log.Printf("Watching for new frames in: %s", newDir)
+	log.Printf("Watching for new frames in: %s", framesDir)
 
 	// --- Pub/Sub Client Initialization ---
 	ctx := context.Background()
@@ -44,75 +31,40 @@ func main() {
 	}
 	defer client.Close()
 	topic := client.Topic(topicID)
-	topic.PublishSettings.ByteThreshold = 5000
-	topic.PublishSettings.CountThreshold = 100
-	topic.PublishSettings.DelayThreshold = 100 * time.Millisecond
-
-	// --- Filesystem Watcher Initialization ---
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatalf("Failed to create filesystem watcher: %v", err)
-	}
-	defer watcher.Close()
 
 	// --- Main Processing Loop ---
-	go func() {
+	frameCounter := 1
+	for {
+		filePath := filepath.Join(framesDir, fmt.Sprintf("frame_%08d.jpg", frameCounter))
+
+		// Wait for the next sequential frame to exist.
+		// This is a simple polling mechanism.
 		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				// We only care about new files being written.
-				// 'Write' is the event fsnotify often uses when a file is closed after writing.
-				if event.Op&fsnotify.Write == fsnotify.Write {
-					processFile(event.Name, newDir, processedDir, streamName, topic, ctx)
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				log.Println("Watcher error:", err)
+			if _, err := os.Stat(filePath); err == nil {
+				// File exists, break the inner loop to process it.
+				break
 			}
+			// Wait a moment before checking again.
+			time.Sleep(100 * time.Millisecond)
 		}
-	}()
 
-	err = watcher.Add(newDir)
-	if err != nil {
-		log.Fatalf("Failed to add directory to watcher: %v", err)
-	}
+		log.Printf("Processing frame: %s", filePath)
 
-	// Block forever
-	<-make(chan struct{})
-}
+		// --- Publish the file path to Pub/Sub (Synchronously) ---
+		message := fmt.Sprintf(`{"stream_name": "%s", "frame_path": "%s"}`, streamName, filePath)
+		result := topic.Publish(ctx, &pubsub.Message{
+			Data: []byte(message),
+		})
 
-func processFile(filePath, newDir, processedDir, streamName string, topic *pubsub.Topic, ctx context.Context) {
-	// Sometimes events fire on the directory itself, ignore those.
-	if filePath == newDir {
-		return
-	}
-	
-	log.Printf("Detected new frame: %s", filePath)
-
-	// --- Publish the file path to Pub/Sub ---
-	message := fmt.Sprintf(`{"stream_name": "%s", "frame_path": "%s"}`, streamName, filePath)
-	result := topic.Publish(ctx, &pubsub.Message{
-		Data: []byte(message),
-	})
-
-	// Asynchronously check for publish errors
-	go func(res *pubsub.PublishResult, path string) {
-		_, err := res.Get(ctx)
+		// Block and wait for the result. This is the crucial part for debugging.
+		// If there's any error (permissions, etc.), this will halt the program.
+		serverID, err := result.Get(ctx)
 		if err != nil {
-			log.Printf("Failed to publish message for %s: %v", path, err)
+			log.Fatalf("FATAL: Failed to publish message for %s: %v", filePath, err)
 		}
-	}(result, filePath)
 
-	// --- Move the processed file ---
-	destPath := filepath.Join(processedDir, filepath.Base(filePath))
-	err := os.Rename(filePath, destPath)
-	if err != nil {
-		log.Printf("Failed to move file from %s to %s: %v", filePath, destPath, err)
+		log.Printf("SUCCESS: Published message for %s (Server ID: %s)", filePath, serverID)
+		frameCounter++
 	}
 }
 

@@ -2,9 +2,9 @@
 
 # --- Configuration ---
 TWITCH_URL="${TWITCH_URL:-https://www.twitch.tv/dexerityro}"
-SAMPLING_FPS="${SAMPLING_FPS:-10}"
+SAMPLING_FPS="${SAMPLING_FPS:-1}"
 STREAM_NAME="${STREAM_NAME:-dexerityro}"
-FRAMES_DIR="/mnt/nfs/streams/${STREAM_NAME}/frames/new"
+FRAMES_DIR="/mnt/nfs/streams/${STREAM_NAME}/frames"
 LOG_DIR="/mnt/nfs/jobs/recorder/${POD_NAME}"
 
 # --- Initialization ---
@@ -13,10 +13,10 @@ mkdir -p "$LOG_DIR"
 exec > >(tee -a "${LOG_DIR}/recorder.log") 2>&1
 set -e
 
-echo "--- Starting Recorder with Directory Watcher ---"
+echo "--- Starting Simplified Recorder ---"
 echo "Twitch URL: $TWITCH_URL"
 echo "Sampling FPS: $SAMPLING_FPS"
-echo "------------------------------------------------"
+echo "------------------------------------"
 
 # --- Main Loop ---
 while true; do
@@ -31,22 +31,19 @@ while true; do
 
   echo "Stream is live. Starting Go publisher and ffmpeg."
 
-  # Start the Go publisher in the background
+  # Start the Go publisher in the background to watch for files
   /app/publisher > "${LOG_DIR}/publisher.log" 2>&1 &
   PUBLISHER_PID=$!
   echo "Go publisher started with PID $PUBLISHER_PID"
 
-  # Give the publisher a moment to start up
-  sleep 2
-
   # Start ffmpeg to write frames to the directory
+  # This will run in the foreground of the script
   ffmpeg -i "$STREAM_URL" \
     -loglevel error \
     -an \
     -vf fps="$SAMPLING_FPS" \
     -q:v 2 \
-    -strftime 1 \
-    "${FRAMES_DIR}/frame_%Y%m%d-%H%M%S_%%04d.jpg"
+    "${FRAMES_DIR}/frame_%08d.jpg"
 
   # If ffmpeg exits (stream ends), kill the publisher and loop
   echo "ffmpeg process ended. Cleaning up publisher."

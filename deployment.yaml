@@ -37,15 +37,7 @@ spec:
         volumeMounts:
         - name: nfs-storage
           mountPath: /mnt/nfs
-        - name: gcloud-adc-secret-volume
-          mountPath: /secrets/gcloud
-        envFrom:
-        - secretRef:
-            name: gcloud-adc-secret
       volumes:
       - name: nfs-storage
         persistentVolumeClaim:
           claimName: filestore-pvc
-      - name: gcloud-adc-secret-volume
-        secret:
-          secretName: gcloud-adc-secret
