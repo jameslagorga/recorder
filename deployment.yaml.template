@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stream-recorder
+  name: stream-recorder-STREAM_NAME
   labels:
-    app: stream-recorder
+    app: stream-recorder-STREAM_NAME
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: stream-recorder
+      app: stream-recorder-STREAM_NAME
   template:
     metadata:
       labels:
-        app: stream-recorder
+        app: stream-recorder-STREAM_NAME
     spec:
       nodeSelector:
         node-pool-type: default-pool
@@ -24,10 +24,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: TWITCH_URL
-          value: "https://www.twitch.tv/dexerityro"
         - name: STREAM_NAME
-          value: "dexerityro"
+          value: "STREAM_NAME"
         - name: SAMPLING_FPS
           value: "10"
         - name: GCP_PROJECT_ID

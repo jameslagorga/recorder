@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # --- Configuration ---
-TWITCH_URL="${TWITCH_URL:-https://www.twitch.tv/dexerityro}"
+STREAM_NAME="${STREAM_NAME:-dexerityro}" # Default to dexerityro if not set
+TWITCH_URL="https://www.twitch.tv/${STREAM_NAME}"
 SAMPLING_FPS="${SAMPLING_FPS:-1}"
-STREAM_NAME="${STREAM_NAME:-dexerityro}"
 FRAMES_DIR="/mnt/nfs/streams/${STREAM_NAME}/frames"
 LOG_DIR="/mnt/nfs/jobs/recorder/${POD_NAME}"
 
@@ -38,8 +38,11 @@ while true; do
 
   # Start ffmpeg to write frames to the directory
   # This will run in the foreground of the script
-  ffmpeg -i "$STREAM_URL" \
-    -loglevel error \
+  ffmpeg -re -i "$STREAM_URL" \
+    -loglevel verbose \
+    -fflags +igndts -fflags +discardcorrupt \
+    -err_detect ignore_err \
+    -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2 \
     -an \
     -vf fps="$SAMPLING_FPS" \
     -q:v 2 \
