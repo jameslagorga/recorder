@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stream-recorder
+  labels:
+    app: stream-recorder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stream-recorder
+  template:
+    metadata:
+      labels:
+        app: stream-recorder
+    spec:
+      nodeSelector:
+        node-pool-type: default-pool
+      containers:
+      - name: stream-recorder
+        image: gcr.io/lagorgeous-helping-hands/stream-recorder:latest
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: TWITCH_URL
+          value: "https://www.twitch.tv/dexerityro"
+        - name: STREAM_NAME
+          value: "dexerityro"
+        - name: SAMPLING_FPS
+          value: "10"
+        - name: GCP_PROJECT_ID
+          value: "lagorgeous-helping-hands"
+        - name: TOPIC_ID
+          value: "frame-processing-topic"
+        volumeMounts:
+        - name: nfs-storage
+          mountPath: /mnt/nfs
+        - name: gcloud-adc-secret-volume
+          mountPath: /secrets/gcloud
+        envFrom:
+        - secretRef:
+            name: gcloud-adc-secret
+      volumes:
+      - name: nfs-storage
+        persistentVolumeClaim:
+          claimName: filestore-pvc
+      - name: gcloud-adc-secret-volume
+        secret:
+          secretName: gcloud-adc-secret
