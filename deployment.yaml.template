@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stream-recorder-STREAM_NAME
+  name: stream-recorder-{{STREAM_NAME}}
   labels:
-    app: stream-recorder-STREAM_NAME
+    app: stream-recorder-{{STREAM_NAME}}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: stream-recorder-STREAM_NAME
+      app: stream-recorder-{{STREAM_NAME}}
   template:
     metadata:
       labels:
-        app: stream-recorder-STREAM_NAME
+        app: stream-recorder-{{STREAM_NAME}}
     spec:
       nodeSelector:
         node-pool-type: default-pool
@@ -25,9 +25,11 @@ spec:
             fieldRef:
               fieldPath: metadata.name
         - name: STREAM_NAME
-          value: "STREAM_NAME"
+          value: "{{STREAM_NAME}}"
         - name: SAMPLING_FPS
-          value: "10"
+          value: "{{SAMPLING_FPS}}"
+        - name: DURATION
+          value: "{{DURATION}}"
         - name: GCP_PROJECT_ID
           value: "lagorgeous-helping-hands"
         - name: TOPIC_ID
