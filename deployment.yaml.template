@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stream-recorder-{{STREAM_NAME}}
+  name: stream-recorder-{{STREAM_NAME_KUBE}}
   labels:
-    app: stream-recorder-{{STREAM_NAME}}
+    app: stream-recorder-{{STREAM_NAME_KUBE}}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: stream-recorder-{{STREAM_NAME}}
+      app: stream-recorder-{{STREAM_NAME_KUBE}}
   template:
     metadata:
       labels:
-        app: stream-recorder-{{STREAM_NAME}}
+        app: stream-recorder-{{STREAM_NAME_KUBE}}
     spec:
       nodeSelector:
         node-pool-type: default-pool

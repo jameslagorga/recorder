@@ -19,13 +19,16 @@ apply:
 		echo "Usage: make apply stream=<stream_name> [fps=<fps>] [duration=<duration>]"; \
 		exit 1; \
 	fi
-	cat $(RUN_CHART) | sed "s/{{STREAM_NAME}}/$(stream)/g" | kubectl delete --ignore-not-found=true -f -
-	cat $(RUN_CHART) | sed "s/{{STREAM_NAME}}/$(stream)/g" | sed "s/{{SAMPLING_FPS}}/$(fps)/g" | sed "s/{{DURATION}}/$(duration)/g" | kubectl apply -f -
+	$(eval KUBE_STREAM_NAME := $(shell echo $(stream) | sed 's/_/-/g'))
+	cat $(RUN_CHART) | sed "s/{{STREAM_NAME}}/$(stream)/g" | sed "s/{{STREAM_NAME_KUBE}}/$(KUBE_STREAM_NAME)/g" | kubectl delete --ignore-not-found=true -f -
+	cat $(RUN_CHART) | sed "s/{{STREAM_NAME}}/$(stream)/g" | sed "s/{{STREAM_NAME_KUBE}}/$(KUBE_STREAM_NAME)/g" | sed "s/{{SAMPLING_FPS}}/$(fps)/g" | sed "s/{{DURATION}}/$(duration)/g" | kubectl apply -f -
 
 delete:
 	@if [ -z "$(stream)" ]; then \
 		echo "Usage: make delete stream=<stream_name>"; \
 		exit 1; \
 	fi
-	cat $(RUN_CHART) | sed "s/{{STREAM_NAME}}/$(stream)/g" | kubectl delete -f -
+	$(eval KUBE_STREAM_NAME := $(shell echo $(stream) | sed 's/_/-/g'))
+	cat $(RUN_CHART) | sed "s/{{STREAM_NAME}}/$(stream)/g" | sed "s/{{STREAM_NAME_KUBE}}/$(KUBE_STREAM_NAME)/g" | kubectl delete -f -
+
 
