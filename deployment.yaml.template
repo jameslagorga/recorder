@@ -4,6 +4,8 @@ metadata:
   name: stream-recorder-{{STREAM_NAME_KUBE}}
   labels:
     app: stream-recorder-{{STREAM_NAME_KUBE}}
+    component: stream-recorder
+    stream: {{STREAM_NAME}}
 spec:
   replicas: 1
   selector:
@@ -13,6 +15,8 @@ spec:
     metadata:
       labels:
         app: stream-recorder-{{STREAM_NAME_KUBE}}
+        component: stream-recorder
+        stream: {{STREAM_NAME}}
     spec:
       nodeSelector:
         node-pool-type: default-pool
