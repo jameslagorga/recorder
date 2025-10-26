@@ -19,6 +19,7 @@ apply:
 		echo "Usage: make apply stream=<stream_name> [fps=<fps>] [duration=<duration>]"; \
 		exit 1; \
 	fi
+	cat $(RUN_CHART) | sed "s/{{STREAM_NAME}}/$(stream)/g" | kubectl delete --ignore-not-found=true -f -
 	cat $(RUN_CHART) | sed "s/{{STREAM_NAME}}/$(stream)/g" | sed "s/{{SAMPLING_FPS}}/$(fps)/g" | sed "s/{{DURATION}}/$(duration)/g" | kubectl apply -f -
 
 delete:
