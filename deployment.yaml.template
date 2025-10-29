@@ -5,7 +5,7 @@ metadata:
   labels:
     app: stream-recorder-{{STREAM_NAME_KUBE}}
     component: stream-recorder
-    stream: {{STREAM_NAME}}
+    stream: {{STREAM_NAME_KUBE}}
 spec:
   replicas: 1
   selector:
@@ -16,7 +16,7 @@ spec:
       labels:
         app: stream-recorder-{{STREAM_NAME_KUBE}}
         component: stream-recorder
-        stream: {{STREAM_NAME}}
+        stream: {{STREAM_NAME_KUBE}}
     spec:
       nodeSelector:
         node-pool-type: default-pool
