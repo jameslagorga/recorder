@@ -3,7 +3,7 @@
 # --- Configuration ---
 STREAM_NAME="${STREAM_NAME:-dexerityro}" # Default to dexerityro if not set
 TWITCH_URL="https://www.twitch.tv/${STREAM_NAME}"
-SAMPLING_FPS="${SAMPLING_FPS:-1}"
+SAMPLING_FPS="${SAMPLING_FPS:-20}" # Default to 20 FPS if not set
 DURATION="${DURATION:-}"
 FRAMES_DIR="/mnt/nfs/streams/${STREAM_NAME}/frames"
 LOG_DIR="/mnt/nfs/jobs/recorder/${POD_NAME}"
@@ -14,34 +14,76 @@ mkdir -p "$LOG_DIR"
 exec > >(tee -a "${LOG_DIR}/recorder.log") 2>&1
 set -e
 
-echo "--- Starting Simplified Recorder ---"
+  echo "--- Starting Simplified Recorder ---"
+
 echo "Twitch URL: $TWITCH_URL"
+
 echo "Sampling FPS: $SAMPLING_FPS"
 
+
+
 # --- Calculate FPS Filter ---
+
 # Use bc for floating point comparison
+
 IS_LESS_THAN_ONE=$(echo "$SAMPLING_FPS < 1" | bc -l)
 
+
+
 if [ "$IS_LESS_THAN_ONE" -eq 1 ]; then
+
   # Calculate the denominator for the fraction
+
   DENOMINATOR=$(echo "1 / $SAMPLING_FPS" | bc)
+
   FPS_FILTER="fps=1/${DENOMINATOR}"
+
   echo "Calculated FPS filter for values < 1: ${FPS_FILTER}"
+
 else
+
   FPS_FILTER="fps=${SAMPLING_FPS}"
+
   echo "Using standard FPS filter: ${FPS_FILTER}"
+
 fi
+
 echo "------------------------------------"
 
+
+
 # --- Main Loop ---
+
 while true; do
+
   echo "Checking for live stream..."
-  STREAM_URL=$(streamlink --stream-url "$TWITCH_URL" best || echo "")
+
+  STREAM_URL=$(streamlink --stream-url "$TWITCH_URL" best)
+
+  EXIT_CODE=$?
+
+
+
+  if [ $EXIT_CODE -ne 0 ]; then
+
+    echo "Streamlink exited with code $EXIT_CODE. Stream is not live or could not be fetched. Exiting gracefully."
+
+    sleep 5 # Give time for logs to be collected
+
+    exit 0
+
+  fi
+
+
 
   if [ -z "$STREAM_URL" ]; then
-    echo "Stream is not live or could not be fetched. Waiting 30 seconds..."
-    sleep 30
-    continue
+
+    echo "Stream URL is empty. Stream is not live or could not be fetched. Exiting gracefully."
+
+    sleep 5 # Give time for logs to be collected
+
+    exit 0
+
   fi
 
   echo "Stream is live. Starting Go publisher and ffmpeg."
@@ -61,13 +103,16 @@ while true; do
   # Start ffmpeg to write frames to the directory
   # This will run in the foreground of the script
   ffmpeg -re -i "$STREAM_URL" \
+    -threads 0 \
     -loglevel verbose \
+    -nostats \
+    -progress "${LOG_DIR}/ffmpeg_progress.log" \
     -fflags +igndts -fflags +discardcorrupt \
     -err_detect ignore_err \
     -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2 \
     -an \
     -vf "$FPS_FILTER" \
-    -q:v 2 \
+    -q:v 4 \
     $DURATION_OPT \
     "${FRAMES_DIR}/frame_%08d.jpg"
 

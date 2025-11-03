@@ -1,5 +1,5 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: stream-recorder-{{STREAM_NAME_KUBE}}
   labels:
@@ -7,10 +7,7 @@ metadata:
     component: stream-recorder
     stream: {{STREAM_NAME_KUBE}}
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: stream-recorder-{{STREAM_NAME_KUBE}}
+  backoffLimit: 3
   template:
     metadata:
       labels:
@@ -19,7 +16,7 @@ spec:
         stream: {{STREAM_NAME_KUBE}}
     spec:
       nodeSelector:
-        node-pool-type: default-pool
+        node-pool-type: recorder-pool
       containers:
       - name: stream-recorder
         image: gcr.io/lagorgeous-helping-hands/stream-recorder:latest
@@ -32,15 +29,21 @@ spec:
           value: "{{STREAM_NAME}}"
         - name: SAMPLING_FPS
           value: "{{SAMPLING_FPS}}"
-        - name: DURATION
-          value: "{{DURATION}}"
         - name: GCP_PROJECT_ID
           value: "lagorgeous-helping-hands"
         - name: TOPIC_ID
           value: "frame-processing-topic"
+        command: ["/bin/bash", "-c", "./record.sh"]
+        resources:
+          requests:
+            cpu: "1.9"
+          limits:
+            cpu: "2.5"
+            memory: "1Gi"
         volumeMounts:
         - name: nfs-storage
           mountPath: /mnt/nfs
+      restartPolicy: Never
       volumes:
       - name: nfs-storage
         persistentVolumeClaim:
