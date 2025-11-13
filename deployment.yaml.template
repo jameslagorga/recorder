@@ -8,6 +8,7 @@ metadata:
     stream: {{STREAM_NAME_KUBE}}
 spec:
   backoffLimit: 3
+  ttlSecondsAfterFinished: 300 # Automatically delete job 5 minutes after it finishes (succeeds or fails)
   template:
     metadata:
       labels:
@@ -36,7 +37,7 @@ spec:
         command: ["/bin/bash", "-c", "./record.sh"]
         resources:
           requests:
-            cpu: "1.9"
+            cpu: "1.85"
           limits:
             cpu: "2.5"
             memory: "1Gi"

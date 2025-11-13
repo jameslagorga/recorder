@@ -58,23 +58,11 @@ while true; do
 
   echo "Checking for live stream..."
 
-  STREAM_URL=$(streamlink --stream-url "$TWITCH_URL" best)
-
-  EXIT_CODE=$?
-
-
-
-  if [ $EXIT_CODE -ne 0 ]; then
-
-    echo "Streamlink exited with code $EXIT_CODE. Stream is not live or could not be fetched. Exiting gracefully."
-
+  if ! STREAM_URL=$(streamlink --stream-url "$TWITCH_URL" best); then
+    echo "Streamlink exited with code $?. Stream is not live or could not be fetched. Exiting gracefully."
     sleep 5 # Give time for logs to be collected
-
     exit 0
-
   fi
-
-
 
   if [ -z "$STREAM_URL" ]; then
 

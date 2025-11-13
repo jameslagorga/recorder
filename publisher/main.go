@@ -103,6 +103,9 @@ func main() {
 			message := fmt.Sprintf(`{"stream_name": "%s", "frame_path": "%s"}`, streamName, filePath)
 			result := topic.Publish(ctx, &pubsub.Message{
 				Data: []byte(message),
+				Attributes: map[string]string{
+					"stream_name": streamName,
+				},
 			})
 
 			serverID, err := result.Get(ctx)
