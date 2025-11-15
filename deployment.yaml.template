@@ -30,6 +30,8 @@ spec:
           value: "{{STREAM_NAME}}"
         - name: SAMPLING_FPS
           value: "{{SAMPLING_FPS}}"
+        - name: DURATION
+          value: "{{DURATION}}"
         - name: GCP_PROJECT_ID
           value: "lagorgeous-helping-hands"
         - name: TOPIC_ID

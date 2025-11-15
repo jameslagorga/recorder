@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/pubsub"
@@ -21,7 +22,15 @@ func main() {
 	projectID := getEnv("GCP_PROJECT_ID", "lagorgeous-helping-hands")
 	topicID := getEnv("TOPIC_ID", "frame-processing-topic")
 	streamName := getEnv("STREAM_NAME", "dexerityro")
+	podName := getEnv("POD_NAME", "") // Get the POD_NAME from env
 	baseFramesDir := getEnv("FRAMES_DIR", "/mnt/nfs/streams")
+
+	if podName == "" {
+		log.Fatal("POD_NAME environment variable is not set.")
+	}
+	parts := strings.Split(podName, "-")
+	shortPodID := parts[len(parts)-1]
+
 	pollIntervalStr := getEnv("POLL_INTERVAL_MS", "500") // Polling interval in milliseconds
 
 	pollInterval, err := time.ParseDuration(pollIntervalStr + "ms")
@@ -29,8 +38,8 @@ func main() {
 		log.Fatalf("Invalid POLL_INTERVAL_MS: %v", err)
 	}
 
-	framesDir := filepath.Join(baseFramesDir, streamName, "frames")
-	stateFilePath := filepath.Join(baseFramesDir, streamName, "publisher.state.timestamp")
+	framesDir := filepath.Join(baseFramesDir, streamName, shortPodID, "frames")
+	stateFilePath := filepath.Join(baseFramesDir, streamName, shortPodID, "publisher.state.timestamp")
 	log.Printf("Watching for new frames in: %s", framesDir)
 	log.Printf("Using state file: %s", stateFilePath)
 

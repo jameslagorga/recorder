@@ -5,7 +5,9 @@ STREAM_NAME="${STREAM_NAME:-dexerityro}" # Default to dexerityro if not set
 TWITCH_URL="https://www.twitch.tv/${STREAM_NAME}"
 SAMPLING_FPS="${SAMPLING_FPS:-20}" # Default to 20 FPS if not set
 DURATION="${DURATION:-}"
-FRAMES_DIR="/mnt/nfs/streams/${STREAM_NAME}/frames"
+# Extract the short ID from the pod name (e.g., stream-recorder-foo-abcde -> abcde)
+SHORT_POD_ID=$(echo "${POD_NAME}" | rev | cut -d- -f1 | rev)
+FRAMES_DIR="/mnt/nfs/streams/${STREAM_NAME}/${SHORT_POD_ID}/frames"
 LOG_DIR="/mnt/nfs/jobs/recorder/${POD_NAME}"
 
 # --- Initialization ---
@@ -13,6 +15,29 @@ mkdir -p "$FRAMES_DIR"
 mkdir -p "$LOG_DIR"
 exec > >(tee -a "${LOG_DIR}/recorder.log") 2>&1
 set -e
+
+# --- Cleanup Function and Trap ---
+function run_analysis_and_cleanup() {
+  echo "--- Running analysis and cleanup ---"
+  # Kill the background publisher if it's running
+  if [ -n "$PUBLISHER_PID" ] && ps -p $PUBLISHER_PID > /dev/null; then
+    echo "Stopping publisher with PID $PUBLISHER_PID."
+    kill $PUBLISHER_PID
+    wait $PUBLISHER_PID 2>/dev/null
+  fi
+
+  # If DURATION is set, it implies this was a planned recording session
+  # that should be analyzed.
+  if [ -n "$DURATION" ]; then
+    echo "Recording session finished. Running analysis."
+    /app/check_copy_condition.sh
+  else
+    echo "No DURATION set or stream ended unexpectedly, skipping analysis."
+  fi
+  echo "--- Cleanup complete ---"
+}
+trap run_analysis_and_cleanup EXIT
+
 
   echo "--- Starting Simplified Recorder ---"
 
@@ -104,13 +129,10 @@ while true; do
     $DURATION_OPT \
     "${FRAMES_DIR}/frame_%08d.jpg"
 
-  # If ffmpeg exits (stream ends), kill the publisher and loop
-  echo "ffmpeg process ended. Cleaning up publisher."
-  kill $PUBLISHER_PID
-  wait $PUBLISHER_PID 2>/dev/null
-
+  # If ffmpeg exits, the trap will handle cleanup and analysis.
+  # If DURATION was set, the trap will run the analysis and the script will exit.
+  # If DURATION was not set, the script will loop to check for the stream again.
   if [ -n "$DURATION" ]; then
-    echo "Recording duration reached. Exiting."
     exit 0
   fi
 
