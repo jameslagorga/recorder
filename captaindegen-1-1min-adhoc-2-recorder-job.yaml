@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: stream-recorder-captaindegen-1-1min-adhoc-2
+spec:
+  template:
+    spec:
+      containers:
+      - name: stream-recorder
+        image: gcr.io/lagorgeous-helping-hands/stream-recorder:latest
+        env:
+        - name: STREAM_NAME
+          value: "captaindegen_"
+        - name: SAMPLING_FPS
+          value: "20"
+        - name: DURATION
+          value: "60"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        volumeMounts:
+        - name: nfs-volume
+          mountPath: /mnt/nfs
+      restartPolicy: Never
+      volumes:
+      - name: nfs-volume
+        persistentVolumeClaim:
+          claimName: filestore-pvc
+  backoffLimit: 0

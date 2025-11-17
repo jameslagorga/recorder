@@ -29,7 +29,6 @@ COPY --from=builder /app/publisher .
 
 # Copy the entrypoint script
 COPY record.sh .
-COPY check_copy_condition.sh .
-RUN chmod +x record.sh check_copy_condition.sh
+RUN chmod +x record.sh
 
 CMD ["./record.sh"]

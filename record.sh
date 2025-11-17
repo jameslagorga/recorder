@@ -30,7 +30,31 @@ function run_analysis_and_cleanup() {
   # that should be analyzed.
   if [ -n "$DURATION" ]; then
     echo "Recording session finished. Running analysis."
-    /app/check_copy_condition.sh
+
+    # --- Inlined check_copy_condition.sh ---
+    set -e
+
+    # --- Configuration ---
+    QA_SERVICE_URL="http://qa-service.default.svc.cluster.local:80/api/qa/needs_qa"
+
+    # Log a message
+    log() {
+      echo "$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ") INFO: $1"
+    }
+
+    log "--- Notifying QA Service ---"
+    log "Stream Name: ${STREAM_NAME}"
+    log "Short Pod ID: ${SHORT_POD_ID}"
+
+    # --- Notify QA Service ---
+    curl -v -X POST -H "Content-Type: application/json" \
+      -d "{\"stream_name\": \"${STREAM_NAME}\", \"short_pod_id\": \"${SHORT_POD_ID}\"}" \
+      "${QA_SERVICE_URL}"
+
+    log "--- Notification sent ---"
+    # --- End inlined script ---
+    
+sleep 10
   else
     echo "No DURATION set or stream ended unexpectedly, skipping analysis."
   fi
@@ -133,6 +157,7 @@ while true; do
   # If DURATION was set, the trap will run the analysis and the script will exit.
   # If DURATION was not set, the script will loop to check for the stream again.
   if [ -n "$DURATION" ]; then
+    run_analysis_and_cleanup
     exit 0
   fi
 

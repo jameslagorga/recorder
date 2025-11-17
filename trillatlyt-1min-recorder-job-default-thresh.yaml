@@ -1,20 +1,20 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: stream-recorder-{{STREAM_NAME_KUBE}}
+  name: stream-recorder-trillatlyt-10min-default-thresh
   labels:
-    app: stream-recorder-{{STREAM_NAME_KUBE}}
+    app: stream-recorder-trillatlyt-10min-default-thresh
     component: stream-recorder
-    stream: {{STREAM_NAME_KUBE}}
+    stream: trillatlyt-10min-default-thresh
 spec:
   backoffLimit: 3
-  ttlSecondsAfterFinished: 0 # Automatically delete job immediately after it finishes (succeeds or fails)
+  ttlSecondsAfterFinished: 300 # Automatically delete job 5 minutes after it finishes (succeeds or fails)
   template:
     metadata:
       labels:
-        app: stream-recorder-{{STREAM_NAME_KUBE}}
+        app: stream-recorder-trillatlyt-10min-default-thresh
         component: stream-recorder
-        stream: {{STREAM_NAME_KUBE}}
+        stream: trillatlyt-10min-default-thresh
     spec:
       nodeSelector:
         node-pool-type: recorder-pool
@@ -27,11 +27,11 @@ spec:
             fieldRef:
               fieldPath: metadata.name
         - name: STREAM_NAME
-          value: "{{STREAM_NAME}}"
+          value: "trillatlyt"
         - name: SAMPLING_FPS
-          value: "{{SAMPLING_FPS}}"
+          value: "20"
         - name: DURATION
-          value: "{{DURATION}}"
+          value: "60"
         - name: GCP_PROJECT_ID
           value: "lagorgeous-helping-hands"
         - name: TOPIC_ID
